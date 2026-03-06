@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { orderSchema } from '@/schemas/orderSchema';
+import { createOrderSchema } from '@/schemas/orderSchema';
 import { supabase } from '@/lib/supabase';
 import { mollieClient } from '@/lib/mollie';
 import { PaymentMethod } from '@mollie/api-client';
@@ -14,8 +14,15 @@ export async function POST(request: Request) {
             orderData.deliveryDate = new Date(orderData.deliveryDate);
         }
 
-        // 1. Validate incoming data against Zod schema
-        const validationResult = orderSchema.safeParse(orderData);
+        // 1. Fetch current settings from Supabase for dynamic validation
+        const { data: settings } = await supabase.from('store_settings').select('valid_zipcodes, pickup_locations').eq('id', 1).single();
+        const validZipcodes = settings?.valid_zipcodes || [];
+        const pickupLocations = settings?.pickup_locations || [];
+
+        const schema = createOrderSchema(validZipcodes, pickupLocations);
+
+        // 2. Validate incoming data against Zod schema
+        const validationResult = schema.safeParse(orderData);
         if (!validationResult.success) {
             return NextResponse.json(
                 { error: 'Invalid order data', details: validationResult.error.flatten() },
@@ -27,7 +34,7 @@ export async function POST(request: Request) {
 
         // 2. Calculate Total Amount
         const totalAmount = items.reduce(
-            (sum: number, item: any) => sum + item.price * item.quantity,
+            (sum: number, item: { price: number; quantity: number }) => sum + item.price * item.quantity,
             0
         );
 
@@ -43,6 +50,7 @@ export async function POST(request: Request) {
             delivery_date: validData.deliveryDate.toISOString(),
             delivery_address: addressDetails,
             order_items: items,
+            special_request: validData.specialRequest || null,
             total_amount: totalAmount,
             status: 'pending',
         };
@@ -69,9 +77,22 @@ export async function POST(request: Request) {
         // Mollie expects amount in string format with 2 decimals (e.g., "10.00")
         const formattedAmount = totalAmount.toFixed(2);
 
-        // Dynamically get the base URL to support both 3000 and 3001 during local dev
+        // Dynamically get the base URL to prevent Vercel DEPLOYMENT_NOT_FOUND errors
         const origin = request.headers.get('origin');
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || origin || 'http://localhost:3000';
+        const host = request.headers.get('host');
+        const protocol = request.headers.get('x-forwarded-proto') || 'https';
+
+        let baseUrl = origin;
+        if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+            baseUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+        } else if (origin) {
+            baseUrl = origin;
+        } else if (host) {
+            baseUrl = `${protocol}://${host}`;
+        } else {
+            baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        }
+        baseUrl = baseUrl.replace(/\/$/, '');
 
         let paymentUrl = '';
         try {
@@ -90,16 +111,19 @@ export async function POST(request: Request) {
             });
 
             // The @mollie/api-client types can be tricky with getCheckoutUrl.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             paymentUrl = (payment as any).getCheckoutUrl() || '';
 
             // Optionally, update the Supabase order with the mollie payment ID here
             // await supabase.from('orders').update({ payment_id: payment.id }).eq('id', orderId);
 
-        } catch (mollieError) {
+        } catch (mollieError: unknown) {
             console.error('Mollie API Error:', mollieError);
-            // Fallback for dummy testing if Mollie API key is invalid
-            console.warn('Dummy mode: Proceeding without real Mollie link.');
-            paymentUrl = `${baseUrl}/order/success?orderId=${orderId}&dummy=true`;
+            const errorMessage = mollieError instanceof Error ? mollieError.message : String(mollieError);
+            return NextResponse.json({
+                error: 'Mollie 결제창 생성 실패. (Mollie 계정 세팅을 확인해주세요)',
+                details: errorMessage
+            }, { status: 500 });
         }
 
 
