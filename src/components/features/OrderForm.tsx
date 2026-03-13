@@ -1,13 +1,15 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { orderSchema, OrderFormValues } from '@/schemas/orderSchema';
+import { createOrderSchema, OrderFormValues } from '@/schemas/orderSchema';
 import { useCartStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { DatePickerField } from '@/components/features/DatePickerField';
 import {
     Form,
@@ -17,12 +19,24 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form';
+import { useLangStore } from '@/store/useLangStore';
+import { getTranslation } from '@/lib/i18n/translations';
 
-export function OrderForm() {
+interface OrderFormSettings {
+    allowedDates: string[];
+    zipcodes: string[];
+    pickups: string[];
+}
+
+export function OrderForm({ settings }: { settings: OrderFormSettings }) {
     const { items } = useCartStore();
+    const { language } = useLangStore();
+    const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
+
+    const schema = useMemo(() => createOrderSchema(settings.zipcodes, settings.pickups), [settings]);
 
     const form = useForm<OrderFormValues>({
-        resolver: zodResolver(orderSchema),
+        resolver: zodResolver(schema),
         defaultValues: {
             deliveryMethod: 'delivery',
             name: '',
@@ -31,6 +45,7 @@ export function OrderForm() {
             address: '',
             zipcode: '',
             pickupLocation: '',
+            specialRequest: '',
         },
     });
 
@@ -56,7 +71,7 @@ export function OrderForm() {
                 window.location.href = result.paymentUrl;
             } else {
                 console.error('Validation/Server Error:', result.details || result.error);
-                alert('Failed to place order. Check console for details.');
+                alert(result.error ? `${result.error}\n\nDetails: ${result.details || ''}` : 'Failed to place order. Check console for details.');
             }
         } catch (error) {
             console.error('Fetch error:', error);
@@ -66,7 +81,7 @@ export function OrderForm() {
 
     return (
         <div className="p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
-            <h2 className="text-2xl font-bold tracking-tight mb-6">2. Bestelgegevens (Order Details)</h2>
+            <h2 className="text-2xl font-bold tracking-tight mb-6">2. {t('deliveryOrPickup')}</h2>
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -79,20 +94,20 @@ export function OrderForm() {
                             <DatePickerField
                                 value={field.value}
                                 onChange={field.onChange}
+                                allowedDates={settings.allowedDates}
                             />
                         )}
                     />
 
                     {/* 2. Customer Info */}
                     <div className="space-y-4">
-                        <h3 className="font-semibold text-lg border-b pb-2">Klantgegevens (Customer Info)</h3>
                         <div className="grid sm:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Naam (Name)</FormLabel>
+                                        <FormLabel>{t('fullName')}</FormLabel>
                                         <FormControl>
                                             <Input placeholder="Jan Jansen" {...field} />
                                         </FormControl>
@@ -118,7 +133,7 @@ export function OrderForm() {
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem className="sm:col-span-2">
-                                        <FormLabel>E-mail (Email)</FormLabel>
+                                        <FormLabel>{t('email')}</FormLabel>
                                         <FormControl>
                                             <Input placeholder="jan@example.com" type="email" {...field} />
                                         </FormControl>
@@ -130,8 +145,7 @@ export function OrderForm() {
                     </div>
 
                     {/* 3. Delivery Method Selection */}
-                    <div className="space-y-4">
-                        <h3 className="font-semibold text-lg border-b pb-2">Ophaal of Bezorging (Delivery Method)</h3>
+                    <div className="space-y-4 pt-4 border-t">
                         <FormField
                             control={form.control}
                             name="deliveryMethod"
@@ -148,7 +162,7 @@ export function OrderForm() {
                                                     <RadioGroupItem value="delivery" />
                                                 </FormControl>
                                                 <FormLabel className="font-normal cursor-pointer">
-                                                    Bezorgen (Delivery)
+                                                    {t('delivery')}
                                                 </FormLabel>
                                             </FormItem>
                                             <FormItem className="flex items-center space-x-3 space-y-0">
@@ -156,7 +170,7 @@ export function OrderForm() {
                                                     <RadioGroupItem value="pickup" />
                                                 </FormControl>
                                                 <FormLabel className="font-normal cursor-pointer">
-                                                    Ophalen (Pickup Point)
+                                                    {t('pickup')}
                                                 </FormLabel>
                                             </FormItem>
                                         </RadioGroup>
@@ -175,9 +189,9 @@ export function OrderForm() {
                                     name="zipcode"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Postcode (Zipcode)</FormLabel>
+                                            <FormLabel>{t('zipcode')}</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="1012 AB" {...field} />
+                                                <Input placeholder={t('zipcodeHint')} {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -188,9 +202,9 @@ export function OrderForm() {
                                     name="address"
                                     render={({ field }) => (
                                         <FormItem className="sm:col-span-2">
-                                            <FormLabel>Adres en Huisnummer (Address & House Number)</FormLabel>
+                                            <FormLabel>{t('address')}</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="Dam Square 1" {...field} />
+                                                <Input placeholder={t('addressHint')} {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -203,17 +217,20 @@ export function OrderForm() {
                                 name="pickupLocation"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Kies een Ophaalpunt (Choose a Pickup Point)</FormLabel>
+                                        <FormLabel>{t('choosePickup')}</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Selecteer een locatie..." />
+                                                    <SelectValue placeholder={t('selectLocation')} />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="point-a">A'dam Centraal (Central Station)</SelectItem>
-                                                <SelectItem value="point-b">Zuidplein Mall</SelectItem>
-                                                <SelectItem value="point-c">Hanok Kitchen (Main Store)</SelectItem>
+                                                {settings.pickups.map((loc, idx) => (
+                                                    <SelectItem key={idx} value={loc}>{loc}</SelectItem>
+                                                ))}
+                                                {settings.pickups.length === 0 && (
+                                                    <SelectItem value="none" disabled>Geen locaties beschikbaar</SelectItem>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -223,8 +240,29 @@ export function OrderForm() {
                         )}
                     </div>
 
+                    {/* 5. Special Requests */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <FormField
+                            control={form.control}
+                            name="specialRequest"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{t('specialRequest')}</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            placeholder={t('specialRequestHint')}
+                                            className="resize-none h-24"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+
                     <Button type="submit" className="w-full text-lg h-12" disabled={items.length === 0}>
-                        Afrekenen (Proceed to Payment)
+                        {t('checkout')}
                     </Button>
                 </form>
             </Form>

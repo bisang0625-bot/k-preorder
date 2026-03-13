@@ -3,9 +3,13 @@
 import { useCartStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useLangStore } from '@/store/useLangStore';
+import { getTranslation } from '@/lib/i18n/translations';
 
 export function OrderSummary() {
     const { items } = useCartStore();
+    const { language } = useLangStore();
+    const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
 
     const totalAmount = items.reduce(
         (total, item) => total + item.price * item.quantity,
@@ -16,10 +20,10 @@ export function OrderSummary() {
         return (
             <Card className="sticky top-6">
                 <CardHeader>
-                    <CardTitle>Besteloverzicht / Order Summary</CardTitle>
+                    <CardTitle>{t('orderSummary')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-zinc-500 text-sm">Uw winkelwagen is leeg. (Your cart is empty)</p>
+                    <p className="text-zinc-500 text-sm">{t('emptyCart')}</p>
                 </CardContent>
             </Card>
         );
@@ -28,7 +32,7 @@ export function OrderSummary() {
     return (
         <Card className="sticky top-6 border-zinc-200 shadow-sm">
             <CardHeader className="bg-zinc-50 border-b border-zinc-100 rounded-t-xl pb-4">
-                <CardTitle className="text-lg">Besteloverzicht / Order Summary</CardTitle>
+                <CardTitle className="text-lg">{t('orderSummary')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
                 <div className="space-y-4">
@@ -46,7 +50,7 @@ export function OrderSummary() {
                     <Separator className="my-4" />
 
                     <div className="flex justify-between items-center font-bold text-lg">
-                        <span>Totaal / Total</span>
+                        <span>{t('total')}</span>
                         <span className="text-emerald-600">€{totalAmount.toFixed(2)}</span>
                     </div>
                 </div>

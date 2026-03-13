@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
         // Retrieve the payment from Mollie to check its status
         const payment = await mollieClient.payments.get(id);
-        const orderId = (payment.metadata as any)?.order_id as string;
+        const orderId = (payment.metadata as Record<string, unknown>)?.order_id as string;
 
         if (!orderId) {
             console.error('Webhook Error: No order_id found in Mollie metadata.');

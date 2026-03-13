@@ -1,8 +1,6 @@
 import * as z from 'zod';
 
-export const deliveryZipcodes = ['1012 AB', '1012AC', '1013 CD', '1014 EF'];
-
-export const orderSchema = z.object({
+export const createOrderSchema = (deliveryZipcodes: string[], validPickupLocations: string[]) => z.object({
     deliveryMethod: z.enum(['delivery', 'pickup'], {
         message: 'Please select a delivery method.',
     }),
@@ -19,6 +17,9 @@ export const orderSchema = z.object({
 
     // Pickup fields
     pickupLocation: z.string().optional(),
+
+    // Extra fields
+    specialRequest: z.string().max(500, 'Special request is too long.').optional(),
 }).superRefine((data, ctx) => {
     if (data.deliveryMethod === 'delivery') {
         if (!data.address || data.address.trim() === '') {
@@ -36,11 +37,14 @@ export const orderSchema = z.object({
                 path: ['zipcode'],
                 message: 'Zipcode is required for delivery.',
             });
-        } else {
-            const normalizedZip = data.zipcode.replace(/\s+/g, '').toUpperCase();
-            const validZips = deliveryZipcodes.map(z => z.replace(/\s+/g, '').toUpperCase());
+        } else if (deliveryZipcodes && deliveryZipcodes.length > 0) {
+            // Extract only the first 4 numeric digits from customer's input (e.g. "1012 AB" -> "1012")
+            const customerNumericZip = data.zipcode.replace(/\D/g, '').substring(0, 4);
 
-            if (!validZips.includes(normalizedZip)) {
+            // Normalize admin zipcodes to only keep digits as well
+            const validNumericZips = deliveryZipcodes.map(z => z.replace(/\D/g, '').substring(0, 4));
+
+            if (customerNumericZip.length !== 4 || !validNumericZips.includes(customerNumericZip)) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     path: ['zipcode'],
@@ -57,8 +61,18 @@ export const orderSchema = z.object({
                 path: ['pickupLocation'],
                 message: 'Please select a pickup location.',
             });
+        } else if (validPickupLocations && validPickupLocations.length > 0) {
+            // Optional: validate if the select pickup location actually exists in settings
+            if (!validPickupLocations.includes(data.pickupLocation)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['pickupLocation'],
+                    message: 'Ongeldige ophaallocatie (Invalid pickup location).',
+                });
+            }
         }
     }
 });
 
-export type OrderFormValues = z.infer<typeof orderSchema>;
+// Update the type extraction since it's now a factory
+export type OrderFormValues = z.infer<ReturnType<typeof createOrderSchema>>;

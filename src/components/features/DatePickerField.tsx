@@ -18,29 +18,24 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { SelectSingleEventHandler } from 'react-day-picker';
-
-// Admin specified dates (e.g., this coming Friday/Saturday)
-const availableDates = [
-    new Date('2026-03-06T00:00:00'), // Friday
-    new Date('2026-03-07T00:00:00'), // Saturday
-    new Date('2026-03-13T00:00:00'), // Next Friday
-    new Date('2026-03-14T00:00:00'), // Next Saturday
-];
+import { useLangStore } from '@/store/useLangStore';
+import { getTranslation } from '@/lib/i18n/translations';
 
 interface DatePickerFieldProps {
     value: Date | undefined;
     onChange: SelectSingleEventHandler;
+    allowedDates: string[]; // array of 'YYYY-MM-DD' strings
 }
 
-export function DatePickerField({ value, onChange }: DatePickerFieldProps) {
-    // Disable all dates except those explicitly defined
+export function DatePickerField({ value, onChange, allowedDates }: DatePickerFieldProps) {
+    const { language } = useLangStore();
+    const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
+
+    // Disable all dates except those explicitly defined in the allowedDates array
     const isDateDisabled = (date: Date) => {
-        return !availableDates.some(
-            (available) =>
-                date.getDate() === available.getDate() &&
-                date.getMonth() === available.getMonth() &&
-                date.getFullYear() === available.getFullYear()
-        );
+        // Simple string comparison for 'YYYY-MM-DD'
+        const dateString = format(date, 'yyyy-MM-dd');
+        return !allowedDates.includes(dateString);
     };
 
     return (
@@ -59,7 +54,7 @@ export function DatePickerField({ value, onChange }: DatePickerFieldProps) {
                             {value ? (
                                 format(value, 'PPP', { locale: nl })
                             ) : (
-                                <span>Kies een datum (Pick a date)</span>
+                                <span>{t('chooseDate')}</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
