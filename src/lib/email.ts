@@ -1,6 +1,12 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+    },
+});
 
 interface OrderData {
     id: string;
@@ -169,17 +175,12 @@ function adminEmailHtml(order: OrderData): string {
 
 export async function sendOrderConfirmation(order: OrderData): Promise<boolean> {
     try {
-        const { error } = await resend.emails.send({
-            from: '한옥 <onboarding@resend.dev>',
+        await transporter.sendMail({
+            from: `"한옥" <${process.env.GMAIL_USER}>`,
             to: order.customer_email,
             subject: `[한옥] 주문이 확인되었습니다 — #${order.id.slice(0, 8)}`,
             html: customerEmailHtml(order),
         });
-
-        if (error) {
-            console.error('Customer email send error:', error);
-            return false;
-        }
 
         console.log(`✅ Customer confirmation email sent to ${order.customer_email}`);
         return true;
@@ -190,20 +191,15 @@ export async function sendOrderConfirmation(order: OrderData): Promise<boolean> 
 }
 
 export async function sendAdminNotification(order: OrderData): Promise<boolean> {
-    const adminEmail = process.env.ADMIN_EMAIL || 'bisang0625@gmail.com';
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.GMAIL_USER || '';
 
     try {
-        const { error } = await resend.emails.send({
-            from: '한옥 주문알림 <onboarding@resend.dev>',
+        await transporter.sendMail({
+            from: `"한옥 주문알림" <${process.env.GMAIL_USER}>`,
             to: adminEmail,
             subject: `[새 주문] ${order.customer_name} — € ${Number(order.total_amount).toFixed(2)}`,
             html: adminEmailHtml(order),
         });
-
-        if (error) {
-            console.error('Admin email send error:', error);
-            return false;
-        }
 
         console.log(`✅ Admin notification email sent to ${adminEmail}`);
         return true;
