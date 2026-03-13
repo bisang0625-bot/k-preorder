@@ -40,7 +40,7 @@ export default function AdminOrdersPage() {
     const updateOrderStatus = async (orderId: string, newStatus: string) => {
         const { error } = await supabase
             .from('orders')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .update({ status: newStatus })
             .eq('id', orderId);
 
         if (!error) {
