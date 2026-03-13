@@ -37,13 +37,13 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-8 space-y-12">
+        <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-8 space-y-12 w-full">
             <ProductSelection products={products} />
             <OrderForm settings={settings} />
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-4 w-full">
             <OrderSummary />
           </div>
         </div>
