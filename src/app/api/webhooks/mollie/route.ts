@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { mollieClient } from '@/lib/mollie';
 import { supabase } from '@/lib/supabase';
+import { sendOrderConfirmation, sendAdminNotification } from '@/lib/email';
 
 export async function POST(request: Request) {
     try {
@@ -42,6 +43,31 @@ export async function POST(request: Request) {
         if (error) {
             console.error('Supabase Webhook Update Error:', error);
             // Ignore strict fail for testing
+        }
+
+        // Send email notifications when payment is confirmed
+        if (dbStatus === 'paid') {
+            try {
+                // Fetch full order data from Supabase
+                const { data: orderData, error: fetchError } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('id', orderId)
+                    .single();
+
+                if (!fetchError && orderData) {
+                    // Send emails in parallel (don't await sequentially)
+                    await Promise.allSettled([
+                        sendOrderConfirmation(orderData),
+                        sendAdminNotification(orderData),
+                    ]);
+                } else {
+                    console.error('Failed to fetch order for email:', fetchError);
+                }
+            } catch (emailError) {
+                // Email failure should never break the webhook
+                console.error('Email sending error (non-critical):', emailError);
+            }
         }
 
         console.log(`Webhook Processed: Order ${orderId} -> ${dbStatus}`);
