@@ -10,14 +10,15 @@ import { Trash2, Plus, Image as ImageIcon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useLangStore } from '@/store/useLangStore';
 import { getTranslation } from '@/lib/i18n/translations';
+import { TagInput } from '@/components/ui/tag-input';
 
 export default function AdminDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    const [dates, setDates] = useState('');
-    const [zipcodes, setZipcodes] = useState('');
-    const [pickups, setPickups] = useState('');
+    const [dates, setDates] = useState<string[]>([]);
+    const [zipcodes, setZipcodes] = useState<string[]>([]);
+    const [pickups, setPickups] = useState<string[]>([]);
     const [topDescription, setTopDescription] = useState('');
     const [footerInfo, setFooterInfo] = useState('');
 
@@ -41,9 +42,9 @@ export default function AdminDashboardPage() {
             .single();
 
         if (data && !error) {
-            setDates((data.allowed_dates || []).join(', '));
-            setZipcodes((data.valid_zipcodes || []).join(', '));
-            setPickups((data.pickup_locations || []).join(', '));
+            setDates(data.allowed_dates || []);
+            setZipcodes(data.valid_zipcodes || []);
+            setPickups(data.pickup_locations || []);
             setTopDescription(data.top_description || '');
             setFooterInfo(data.footer_info || '');
         }
@@ -59,9 +60,9 @@ export default function AdminDashboardPage() {
     const handleSave = async () => {
         setSaving(true);
         const payload = {
-            allowed_dates: dates.split(',').map(s => s.trim()).filter(Boolean),
-            valid_zipcodes: zipcodes.split(',').map(s => s.trim()).filter(Boolean),
-            pickup_locations: pickups.split(',').map(s => s.trim()).filter(Boolean),
+            allowed_dates: dates.filter(Boolean),
+            valid_zipcodes: zipcodes.filter(Boolean),
+            pickup_locations: pickups.filter(Boolean),
             top_description: topDescription,
             footer_info: footerInfo,
         };
@@ -184,10 +185,10 @@ export default function AdminDashboardPage() {
 
                     <div className="space-y-2">
                         <Label>{t('allowedDates')}</Label>
-                        <Input
-                            value={dates}
-                            onChange={(e) => setDates(e.target.value)}
-                            placeholder="e.g. 2026-03-05, 2026-03-06"
+                        <TagInput
+                            tags={dates}
+                            setTags={setDates}
+                            placeholder="e.g. 2026-03-05"
                         />
                         <p className="text-xs text-zinc-500">
                             {t('allowedDatesSub')}
@@ -196,10 +197,10 @@ export default function AdminDashboardPage() {
 
                     <div className="space-y-2">
                         <Label>{t('validZipcodes')}</Label>
-                        <Input
-                            value={zipcodes}
-                            onChange={(e) => setZipcodes(e.target.value)}
-                            placeholder="e.g. 1012, 1013, 1014"
+                        <TagInput
+                            tags={zipcodes}
+                            setTags={setZipcodes}
+                            placeholder="e.g. 1012"
                         />
                         <p className="text-xs text-zinc-500">
                             {t('validZipcodesSub')}
@@ -208,10 +209,10 @@ export default function AdminDashboardPage() {
 
                     <div className="space-y-2">
                         <Label>{t('pickupLocations')}</Label>
-                        <Input
-                            value={pickups}
-                            onChange={(e) => setPickups(e.target.value)}
-                            placeholder="e.g. Amsterdam Centrum, Rotterdam Zuid"
+                        <TagInput
+                            tags={pickups}
+                            setTags={setPickups}
+                            placeholder="e.g. Amsterdam Centrum"
                         />
                         <p className="text-xs text-zinc-500">
                             {t('pickupLocationsSub')}
