@@ -25,6 +25,7 @@ export default function AdminDashboardPage() {
     const [products, setProducts] = useState<Record<string, unknown>[]>([]);
     const [newProduct, setNewProduct] = useState({ name: '', price: '', description: '' });
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [addingProduct, setAddingProduct] = useState(false);
     const { language } = useLangStore();
     const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
@@ -124,6 +125,7 @@ export default function AdminDashboardPage() {
         } else {
             setNewProduct({ name: '', price: '', description: '' });
             setImageFile(null);
+            setImagePreview(null);
             fetchSettingsAndProducts(); // Refresh list
         }
     };
@@ -287,13 +289,25 @@ export default function AdminDashboardPage() {
                                         className="cursor-pointer file:cursor-pointer"
                                         onChange={e => {
                                             if (e.target.files && e.target.files.length > 0) {
-                                                setImageFile(e.target.files[0]);
+                                                const file = e.target.files[0];
+                                                setImageFile(file);
+                                                setImagePreview(URL.createObjectURL(file));
                                             } else {
                                                 setImageFile(null);
+                                                setImagePreview(null);
                                             }
                                         }}
                                     />
-                                    {imageFile && <span className="text-sm text-emerald-600 font-medium whitespace-nowrap">✓ {t('fileSelected')}</span>}
+                                    {imageFile && (
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                                            {imagePreview && (
+                                                <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden border border-emerald-200 shadow-sm">
+                                                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                                </div>
+                                            )}
+                                            <span className="text-sm text-emerald-600 font-medium whitespace-nowrap">✓ {t('fileSelected')}</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <p className="text-xs text-zinc-500 mt-1">{t('uploadHint')}</p>
                             </div>
