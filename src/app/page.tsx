@@ -37,13 +37,18 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-8 space-y-12 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-8 space-y-12">
             <ProductSelection products={products} />
+            
+            <div className="block lg:hidden">
+              <OrderSummary />
+            </div>
+
             <OrderForm settings={settings} />
           </div>
 
-          <div className="lg:col-span-4 w-full">
+          <div className="hidden lg:block lg:col-span-4">
             <OrderSummary />
           </div>
         </div>
