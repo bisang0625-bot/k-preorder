@@ -3,9 +3,19 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
+import { nl, enUS, ko } from 'date-fns/locale';
 import { useLangStore } from '@/store/useLangStore';
 import { getTranslation } from '@/lib/i18n/translations';
+import { CalendarIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 export default function AdminOrdersPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -19,6 +29,15 @@ export default function AdminOrdersPage() {
 
     const { language } = useLangStore();
     const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
+
+    const localeMap = {
+        nl: nl,
+        en: enUS,
+        ko: ko,
+    };
+    const currentLocale = localeMap[language as keyof typeof localeMap] || nl;
+
+    const dateValue = selectedDate ? parse(selectedDate, 'yyyy-MM-dd', new Date()) : undefined;
 
     useEffect(() => {
         fetchOrders();
@@ -155,16 +174,41 @@ export default function AdminOrdersPage() {
                         className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
                     />
                 </div>
-                <div className="w-full sm:w-48">
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => {
-                            setSelectedDate(e.target.value);
-                            setCurrentPage(1);
-                        }}
-                        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                    />
+                <div className="w-full sm:w-auto">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full sm:w-[240px] justify-start text-left font-normal",
+                                    !selectedDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {selectedDate ? (
+                                    format(dateValue!, "PPP", { locale: currentLocale })
+                                ) : (
+                                    <span>Filter by Date...</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={dateValue}
+                                onSelect={(date) => {
+                                    if (date) {
+                                        setSelectedDate(format(date, 'yyyy-MM-dd'));
+                                    } else {
+                                        setSelectedDate('');
+                                    }
+                                    setCurrentPage(1);
+                                }}
+                                initialFocus
+                                locale={currentLocale}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 {(searchQuery || selectedDate) && (
                     <button
