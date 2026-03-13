@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { nl, enUS, ko } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -31,6 +31,13 @@ export function DatePickerField({ value, onChange, allowedDates }: DatePickerFie
     const { language } = useLangStore();
     const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
 
+    const localeMap = {
+        nl: nl,
+        en: enUS,
+        ko: ko,
+    };
+    const currentLocale = localeMap[language as keyof typeof localeMap] || nl;
+
     // Disable all dates except those explicitly defined in the allowedDates array
     const isDateDisabled = (date: Date) => {
         // Simple string comparison for 'YYYY-MM-DD'
@@ -52,7 +59,7 @@ export function DatePickerField({ value, onChange, allowedDates }: DatePickerFie
                             )}
                         >
                             {value ? (
-                                format(value, 'PPP', { locale: nl })
+                                format(value, 'PPP', { locale: currentLocale })
                             ) : (
                                 <span>{t('chooseDate')}</span>
                             )}
@@ -67,7 +74,7 @@ export function DatePickerField({ value, onChange, allowedDates }: DatePickerFie
                         onSelect={onChange}
                         disabled={isDateDisabled}
                         initialFocus
-                        locale={nl}
+                        locale={currentLocale}
                     />
                 </PopoverContent>
             </Popover>
