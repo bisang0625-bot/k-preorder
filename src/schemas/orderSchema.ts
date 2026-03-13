@@ -9,6 +9,7 @@ export const createOrderSchema = (deliveryZipcodes: string[], validPickupLocatio
     }),
     name: z.string().min(2, 'Name must be at least 2 characters.'),
     email: z.string().email('Please enter a valid email address.'),
+    confirmEmail: z.string().email('Please enter a valid email address.'),
     phone: z.string().min(10, 'Please enter a valid phone number.').optional(),
 
     // Delivery fields
@@ -21,6 +22,14 @@ export const createOrderSchema = (deliveryZipcodes: string[], validPickupLocatio
     // Extra fields
     specialRequest: z.string().max(500, 'Special request is too long.').optional(),
 }).superRefine((data, ctx) => {
+    if (data.email !== data.confirmEmail) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['confirmEmail'],
+            message: 'E-mailadressen komen niet overeen (Emails do not match).',
+        });
+    }
+
     if (data.deliveryMethod === 'delivery') {
         if (!data.address || data.address.trim() === '') {
             ctx.addIssue({

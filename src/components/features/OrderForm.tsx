@@ -43,6 +43,7 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
             deliveryMethod: 'delivery',
             name: '',
             email: '',
+            confirmEmail: '',
             phone: '',
             address: '',
             zipcode: '',
@@ -138,8 +139,21 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
                                 control={form.control}
                                 name="email"
                                 render={({ field }) => (
-                                    <FormItem className="sm:col-span-2">
+                                    <FormItem>
                                         <FormLabel>{t('email')}</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="jan@example.com" type="email" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="confirmEmail"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{t('confirmEmail')}</FormLabel>
                                         <FormControl>
                                             <Input placeholder="jan@example.com" type="email" {...field} />
                                         </FormControl>
