@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createOrderSchema, OrderFormValues } from '@/schemas/orderSchema';
@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerField } from '@/components/features/DatePickerField';
+import { Loader2 } from 'lucide-react';
 import {
     Form,
     FormControl,
@@ -32,6 +33,7 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
     const { items } = useCartStore();
     const { language } = useLangStore();
     const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const schema = useMemo(() => createOrderSchema(settings.zipcodes, settings.pickups), [settings]);
 
@@ -57,6 +59,8 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
             return;
         }
 
+        setIsSubmitting(true);
+
         try {
             const response = await fetch('/api/checkout', {
                 method: 'POST',
@@ -72,10 +76,12 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
             } else {
                 console.error('Validation/Server Error:', result.details || result.error);
                 alert(result.error ? `${result.error}\n\nDetails: ${result.details || ''}` : 'Failed to place order. Check console for details.');
+                setIsSubmitting(false);
             }
         } catch (error) {
             console.error('Fetch error:', error);
             alert('Network error occurred.');
+            setIsSubmitting(false);
         }
     }
 
@@ -261,8 +267,19 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
                         />
                     </div>
 
-                    <Button type="submit" className="w-full text-lg h-12" disabled={items.length === 0}>
-                        {t('checkout')}
+                    <Button
+                        type="submit"
+                        className="w-full text-lg h-12"
+                        disabled={items.length === 0 || isSubmitting}
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                {t('submitting')}
+                            </>
+                        ) : (
+                            t('checkout')
+                        )}
                     </Button>
                 </form>
             </Form>

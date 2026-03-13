@@ -11,7 +11,7 @@ export default function AdminOrdersPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'all' | 'paid' | 'pending' | 'failed'>('all');
+    const [activeTab, setActiveTab] = useState<'all' | 'paid' | 'pending' | 'fulfilled' | 'expired' | 'failed'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDate, setSelectedDate] = useState<string>(''); // YYYY-MM-DD string
     const [currentPage, setCurrentPage] = useState(1);
@@ -37,11 +37,30 @@ export default function AdminOrdersPage() {
         setLoading(false);
     };
 
+    const updateOrderStatus = async (orderId: string, newStatus: string) => {
+        const { error } = await supabase
+            .from('orders')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', orderId);
+
+        if (!error) {
+            // Update local state
+            setOrders(orders.map(order =>
+                order.id === orderId ? { ...order, status: newStatus } : order
+            ));
+            alert(t('statusUpdated'));
+        } else {
+            alert('Error updating status: ' + error.message);
+        }
+    };
+
     // Derived state for filtering and pagination
     const filteredOrders = orders.filter((order) => {
         // Tab Status Filter
         if (activeTab === 'paid' && order.status !== 'paid') return false;
         if (activeTab === 'pending' && order.status !== 'pending') return false;
+        if (activeTab === 'fulfilled' && order.status !== 'fulfilled') return false;
+        if (activeTab === 'expired' && order.status !== 'expired') return false;
         if (activeTab === 'failed' && order.status !== 'failed' && order.status !== 'canceled') return false;
 
         // Search Query Filter (Name or Email)
@@ -70,7 +89,7 @@ export default function AdminOrdersPage() {
         currentPage * ITEMS_PER_PAGE
     );
 
-    const handleTabChange = (tab: 'all' | 'paid' | 'pending' | 'failed') => {
+    const handleTabChange = (tab: 'all' | 'paid' | 'pending' | 'fulfilled' | 'expired' | 'failed') => {
         setActiveTab(tab);
         setCurrentPage(1); // Reset to first page when filtering changes
     };
@@ -83,30 +102,42 @@ export default function AdminOrdersPage() {
             </div>
 
             {/* Status Tabs */}
-            <div className="flex space-x-2 border-b pb-4">
+            <div className="flex flex-wrap gap-2 border-b pb-4">
                 <button
                     onClick={() => handleTabChange('all')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}
                 >
-                    All Orders
+                    {t('tabAll')}
                 </button>
                 <button
                     onClick={() => handleTabChange('paid')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'paid' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}
                 >
-                    Paid
+                    {t('tabPaid')}
                 </button>
                 <button
                     onClick={() => handleTabChange('pending')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'pending' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}
                 >
-                    Pending
+                    {t('tabPending')}
+                </button>
+                <button
+                    onClick={() => handleTabChange('fulfilled')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'fulfilled' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}
+                >
+                    {t('tabFulfilled')}
+                </button>
+                <button
+                    onClick={() => handleTabChange('expired')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'expired' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}
+                >
+                    {t('tabExpired')}
                 </button>
                 <button
                     onClick={() => handleTabChange('failed')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'failed' ? 'bg-zinc-900 text-white' : 'bg-transparent text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}
                 >
-                    Canceled / Failed
+                    {t('tabFailed')}
                 </button>
             </div>
 
@@ -176,12 +207,24 @@ export default function AdminOrdersPage() {
                                     {paginatedOrders.map((order) => (
                                         <tr key={order.id} className="border-b transition-colors hover:bg-muted/50">
                                             <td className="p-4 align-middle">
-                                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${order.status === 'paid' ? 'bg-green-100 text-green-800' :
-                                                    order.status === 'failed' || order.status === 'canceled' ? 'bg-red-100 text-red-800' :
+                                                <select
+                                                    value={order.status}
+                                                    onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                                    className={`rounded-md px-2.5 py-1 text-xs font-semibold border-0 focus:ring-2 focus:ring-zinc-900 cursor-pointer ${
+                                                        order.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                                        order.status === 'fulfilled' ? 'bg-blue-100 text-blue-800' :
+                                                        order.status === 'expired' ? 'bg-gray-100 text-gray-700' :
+                                                        order.status === 'failed' || order.status === 'canceled' ? 'bg-red-100 text-red-800' :
                                                         'bg-yellow-100 text-yellow-800'
-                                                    }`}>
-                                                    {order.status === 'paid' ? t('statusPaid') : order.status === 'canceled' ? t('statusCanceled') : t('statusPending')}
-                                                </span>
+                                                    }`}
+                                                >
+                                                    <option value="pending">{t('statusPending')}</option>
+                                                    <option value="paid">{t('statusPaid')}</option>
+                                                    <option value="fulfilled">{t('statusFulfilled')}</option>
+                                                    <option value="expired">{t('statusExpired')}</option>
+                                                    <option value="canceled">{t('statusCanceled')}</option>
+                                                    <option value="failed">{t('statusFailed')}</option>
+                                                </select>
                                             </td>
                                             <td className="p-4 align-middle font-medium text-zinc-600">
                                                 {format(new Date(order.created_at), 'dd-MM-yyyy HH:mm')}
