@@ -207,8 +207,8 @@ export default function AdminOrdersPage() {
         return (
             <Popover>
                 <PopoverTrigger asChild>
-                    <button className={`ml-1 focus:outline-none p-1 rounded hover:bg-zinc-200 transition-colors ${selected.length > 0 ? 'text-blue-600 opacity-100 bg-blue-50' : 'text-zinc-400 opacity-0 group-hover:opacity-100'}`} onClick={(e) => e.stopPropagation()}>
-                        <Filter className="w-3 h-3" />
+                    <button className={`ml-1 focus:outline-none p-1 rounded hover:bg-zinc-200 transition-colors ${selected.length > 0 ? 'text-blue-600 opacity-100 bg-blue-50' : 'text-zinc-400 opacity-40 group-hover:opacity-100'}`} onClick={(e) => e.stopPropagation()}>
+                        <Filter className="w-4 h-4" />
                     </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-2" align="start">
