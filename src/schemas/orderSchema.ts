@@ -10,7 +10,7 @@ export const createOrderSchema = (deliveryZipcodes: string[], validPickupLocatio
     name: z.string().min(2, 'Name must be at least 2 characters.'),
     email: z.string().email('Please enter a valid email address.'),
     confirmEmail: z.string().email('Please enter a valid email address.'),
-    phone: z.string().min(10, 'Please enter a valid phone number.').optional(),
+    phone: z.string().min(10, 'Please enter a valid phone number (최소 10자).'),
 
     // Delivery fields
     address: z.string().optional(),

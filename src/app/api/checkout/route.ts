@@ -55,6 +55,7 @@ export async function POST(request: Request) {
         const orderRow = {
             customer_name: validData.name,
             customer_email: validData.email,
+            customer_phone: validData.phone,
             delivery_date: validData.deliveryDate.toISOString(),
             delivery_address: addressDetails,
             order_items: items,

@@ -137,7 +137,7 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
                                 name="phone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Telefoon (Phone) [Optioneel]</FormLabel>
+                                        <FormLabel>Telefoon (Phone)</FormLabel>
                                         <FormControl>
                                             <Input placeholder="+31 6 12345678" {...field} />
                                         </FormControl>

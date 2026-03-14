@@ -12,6 +12,7 @@ interface OrderData {
     id: string;
     customer_name: string;
     customer_email: string;
+    customer_phone: string;
     delivery_date: string;
     delivery_address: {
         address?: string;
@@ -116,8 +117,11 @@ function customerEmailHtml(order: OrderData): string {
 
         <!-- Footer -->
         <div style="background-color: #f5f5f5; padding: 24px 32px; text-align: center;">
+            <p style="font-size: 14px; color: #333; margin: 0 0 8px 0; font-weight: 600;">
+                📞 Hanok 전화번호: +31 6 8113 2233
+            </p>
             <p style="font-size: 12px; color: #888; margin: 0;">
-                문의사항이 있으시면 이 이메일에 답장해 주세요.<br/>
+                문의사항이 있으시면 이 이메일에 답장하거나 위 번호로 연락해 주세요.<br/>
                 감사합니다 — 한옥 팀
             </p>
         </div>
@@ -144,6 +148,10 @@ function adminEmailHtml(order: OrderData): string {
                 <tr>
                     <td style="padding: 6px 0; font-size: 13px; color: #888;">고객 이메일</td>
                     <td style="padding: 6px 0; font-size: 13px; color: #333;">${order.customer_email}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-size: 13px; color: #888;">고객 전화번호</td>
+                    <td style="padding: 6px 0; font-size: 13px; color: #333; font-weight: 600;">${order.customer_phone}</td>
                 </tr>
                 <tr>
                     <td style="padding: 6px 0; font-size: 13px; color: #888;">배달/픽업</td>
