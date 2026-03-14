@@ -7,7 +7,7 @@ import { format, parse } from 'date-fns';
 import { nl, enUS, ko } from 'date-fns/locale';
 import { useLangStore } from '@/store/useLangStore';
 import { getTranslation } from '@/lib/i18n/translations';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -24,6 +24,7 @@ export default function AdminOrdersPage() {
     const [activeTab, setActiveTab] = useState<'all' | 'paid' | 'pending' | 'fulfilled' | 'expired' | 'failed'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDate, setSelectedDate] = useState<string>(''); // YYYY-MM-DD string
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
 
@@ -102,8 +103,35 @@ export default function AdminOrdersPage() {
         return true;
     });
 
-    const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-    const paginatedOrders = filteredOrders.slice(
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+        setCurrentPage(1); // Reset to first page when sorting changes
+    };
+
+    const sortedOrders = [...filteredOrders].sort((a, b) => {
+        if (!sortConfig) return 0;
+        const { key, direction } = sortConfig;
+        
+        let aValue = a[key] ?? '';
+        let bValue = b[key] ?? '';
+
+        // Handle specific nested/calculated columns if necessary
+        if (key === 'customer_address') {
+            aValue = a.delivery_address?.pickupLocation ? `Pickup ${a.delivery_address.pickupLocation}` : `${a.delivery_address?.address} ${a.delivery_address?.zipcode}`;
+            bValue = b.delivery_address?.pickupLocation ? `Pickup ${b.delivery_address.pickupLocation}` : `${b.delivery_address?.address} ${b.delivery_address?.zipcode}`;
+        }
+
+        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    const totalPages = Math.ceil(sortedOrders.length / ITEMS_PER_PAGE);
+    const paginatedOrders = sortedOrders.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
     );
@@ -111,6 +139,16 @@ export default function AdminOrdersPage() {
     const handleTabChange = (tab: 'all' | 'paid' | 'pending' | 'fulfilled' | 'expired' | 'failed') => {
         setActiveTab(tab);
         setCurrentPage(1); // Reset to first page when filtering changes
+    };
+    
+    const getSortIcon = (columnName: string) => {
+        if (!sortConfig || sortConfig.key !== columnName) {
+            return <ArrowUpDown className="w-4 h-4 ml-1 inline-block opacity-40 group-hover:opacity-100" />;
+        }
+        if (sortConfig.direction === 'asc') {
+            return <ArrowUp className="w-4 h-4 ml-1 inline-block text-zinc-900" />;
+        }
+        return <ArrowDown className="w-4 h-4 ml-1 inline-block text-zinc-900" />;
     };
 
     return (
@@ -238,13 +276,25 @@ export default function AdminOrdersPage() {
                             <table className="w-full caption-bottom text-sm border-collapse">
                                 <thead className="[&_tr]:border-b">
                                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Status</th>
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[200px]">Datum Aanmaak</th>
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[200px]">Leveringsdatum</th>
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[250px]">Klant</th>
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Adres/Pickup</th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px] cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('status')}>
+                                            <div className="flex items-center">Status {getSortIcon('status')}</div>
+                                        </th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[200px] cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('created_at')}>
+                                            <div className="flex items-center">Datum Aanmaak {getSortIcon('created_at')}</div>
+                                        </th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[200px] cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('delivery_date')}>
+                                            <div className="flex items-center">Leveringsdatum {getSortIcon('delivery_date')}</div>
+                                        </th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[250px] cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('customer_name')}>
+                                            <div className="flex items-center">Klant {getSortIcon('customer_name')}</div>
+                                        </th>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('customer_address')}>
+                                            <div className="flex items-center">Adres/Pickup {getSortIcon('customer_address')}</div>
+                                        </th>
                                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground min-w-[200px]">{t('orderedItems')}</th>
-                                        <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Totaal</th>
+                                        <th className="h-12 px-4 align-middle font-medium text-muted-foreground cursor-pointer hover:text-zinc-900 group select-none text-right" onClick={() => handleSort('total_amount')}>
+                                            <div className="flex items-center justify-end">Totaal {getSortIcon('total_amount')}</div>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="[&_tr:last-child]:border-0">
