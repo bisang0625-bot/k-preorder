@@ -7,7 +7,7 @@ import { format, parse } from 'date-fns';
 import { nl, enUS, ko } from 'date-fns/locale';
 import { useLangStore } from '@/store/useLangStore';
 import { getTranslation } from '@/lib/i18n/translations';
-import { CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -25,6 +25,7 @@ export default function AdminOrdersPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDate, setSelectedDate] = useState<string>(''); // YYYY-MM-DD string
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+    const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
 
@@ -100,6 +101,24 @@ export default function AdminOrdersPage() {
             if (orderDateLocalStr !== selectedDate) return false;
         }
 
+        // Column Filters (Excel-like)
+        if (columnFilters['status'] && columnFilters['status'].length > 0) {
+            if (!columnFilters['status'].includes(order.status)) return false;
+        }
+        if (columnFilters['delivery_date'] && columnFilters['delivery_date'].length > 0) {
+            const dateStr = format(new Date(order.delivery_date), 'dd MMMM yyyy');
+            if (!columnFilters['delivery_date'].includes(dateStr)) return false;
+        }
+        if (columnFilters['customer_name'] && columnFilters['customer_name'].length > 0) {
+            if (!columnFilters['customer_name'].includes(order.customer_name)) return false;
+        }
+        if (columnFilters['customer_address'] && columnFilters['customer_address'].length > 0) {
+            const addr = order.delivery_address?.pickupLocation
+                ? `📍 Pickup: ${order.delivery_address.pickupLocation}`
+                : `🏠 ${order.delivery_address?.address || '-'}, ${order.delivery_address?.zipcode || '-'}`;
+            if (!columnFilters['customer_address'].includes(addr)) return false;
+        }
+
         return true;
     });
 
@@ -139,6 +158,77 @@ export default function AdminOrdersPage() {
     const handleTabChange = (tab: 'all' | 'paid' | 'pending' | 'fulfilled' | 'expired' | 'failed') => {
         setActiveTab(tab);
         setCurrentPage(1); // Reset to first page when filtering changes
+    };
+
+    const toggleColumnFilter = (key: string, val: string) => {
+        setColumnFilters(prev => {
+            const curr = prev[key] || [];
+            const next = curr.includes(val) ? curr.filter(v => v !== val) : [...curr, val];
+            return { ...prev, [key]: next };
+        });
+        setCurrentPage(1);
+    };
+
+    const getUniqueValues = (key: string) => {
+        const vals = new Set<string>();
+        orders.forEach(o => {
+            if (key === 'status') vals.add(o.status);
+            if (key === 'delivery_date') vals.add(format(new Date(o.delivery_date), 'dd MMMM yyyy'));
+            if (key === 'customer_name') vals.add(o.customer_name);
+            if (key === 'customer_address') {
+                 const addr = o.delivery_address?.pickupLocation
+                    ? `📍 Pickup: ${o.delivery_address.pickupLocation}`
+                    : `🏠 ${o.delivery_address?.address || '-'}, ${o.delivery_address?.zipcode || '-'}`;
+                 vals.add(addr);
+            }
+        });
+        return Array.from(vals).filter(Boolean).sort();
+    };
+
+    const getDisplayValue = (key: string, val: string) => {
+        if (key === 'status') {
+            const statusMap: Record<string, string> = {
+                pending: t('statusPending'),
+                paid: t('statusPaid'),
+                fulfilled: t('statusFulfilled'),
+                expired: t('statusExpired'),
+                canceled: t('statusCanceled'),
+                failed: t('statusFailed')
+            };
+            return statusMap[val] || val;
+        }
+        return val;
+    };
+
+    const renderFilter = (key: string) => {
+        const uniqueVals = getUniqueValues(key);
+        if (uniqueVals.length === 0) return null;
+        const selected = columnFilters[key] || [];
+        return (
+            <Popover>
+                <PopoverTrigger asChild>
+                    <button className={`ml-1 focus:outline-none p-1 rounded hover:bg-zinc-200 transition-colors ${selected.length > 0 ? 'text-blue-600 opacity-100 bg-blue-50' : 'text-zinc-400 opacity-0 group-hover:opacity-100'}`} onClick={(e) => e.stopPropagation()}>
+                        <Filter className="w-3 h-3" />
+                    </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="start">
+                    <div className="text-xs font-semibold text-zinc-500 mb-2 px-1">Filter {key.replace('_', ' ')}</div>
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                        {uniqueVals.map(val => (
+                            <div key={val} className="flex items-center space-x-2 text-sm p-1 hover:bg-zinc-100 rounded cursor-pointer" onClick={() => toggleColumnFilter(key, val)}>
+                                <input type="checkbox" checked={selected.includes(val)} readOnly className="rounded border-zinc-300 pointer-events-none" />
+                                <span className="truncate select-none" title={getDisplayValue(key, val)}>{getDisplayValue(key, val)}</span>
+                            </div>
+                        ))}
+                    </div>
+                    {selected.length > 0 && (
+                        <div className="pt-2 mt-2 border-t text-xs text-center text-red-500 cursor-pointer hover:underline" onClick={() => setColumnFilters(p => ({...p, [key]: []}))}>
+                            Clear Filter
+                        </div>
+                    )}
+                </PopoverContent>
+            </Popover>
+        );
     };
     
     const getSortIcon = (columnName: string) => {
@@ -276,20 +366,32 @@ export default function AdminOrdersPage() {
                             <table className="w-full caption-bottom text-sm border-collapse">
                                 <thead className="[&_tr]:border-b">
                                     <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px] cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('status')}>
-                                            <div className="flex items-center">Status {getSortIcon('status')}</div>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px] group select-none">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center cursor-pointer hover:text-zinc-900" onClick={() => handleSort('status')}>Status {getSortIcon('status')}</div>
+                                                {renderFilter('status')}
+                                            </div>
                                         </th>
                                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[200px] cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('created_at')}>
                                             <div className="flex items-center">Datum Aanmaak {getSortIcon('created_at')}</div>
                                         </th>
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[200px] cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('delivery_date')}>
-                                            <div className="flex items-center">Leveringsdatum {getSortIcon('delivery_date')}</div>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[210px] group select-none">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center cursor-pointer hover:text-zinc-900" onClick={() => handleSort('delivery_date')}>Leveringsdatum {getSortIcon('delivery_date')}</div>
+                                                {renderFilter('delivery_date')}
+                                            </div>
                                         </th>
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[250px] cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('customer_name')}>
-                                            <div className="flex items-center">Klant {getSortIcon('customer_name')}</div>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[250px] group select-none">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center cursor-pointer hover:text-zinc-900" onClick={() => handleSort('customer_name')}>Klant {getSortIcon('customer_name')}</div>
+                                                {renderFilter('customer_name')}
+                                            </div>
                                         </th>
-                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-zinc-900 group select-none" onClick={() => handleSort('customer_address')}>
-                                            <div className="flex items-center">Adres/Pickup {getSortIcon('customer_address')}</div>
+                                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground group select-none">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center cursor-pointer hover:text-zinc-900" onClick={() => handleSort('customer_address')}>Adres/Pickup {getSortIcon('customer_address')}</div>
+                                                {renderFilter('customer_address')}
+                                            </div>
                                         </th>
                                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground min-w-[200px]">{t('orderedItems')}</th>
                                         <th className="h-12 px-4 align-middle font-medium text-muted-foreground cursor-pointer hover:text-zinc-900 group select-none text-right" onClick={() => handleSort('total_amount')}>
