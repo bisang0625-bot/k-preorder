@@ -84,12 +84,13 @@ export default function AdminOrdersPage() {
         if (activeTab === 'expired' && order.status !== 'expired') return false;
         if (activeTab === 'failed' && order.status !== 'failed' && order.status !== 'canceled') return false;
 
-        // Search Query Filter (Name or Email)
+        // Search Query Filter (Name, Email, or Phone)
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             const nameMatch = order.customer_name?.toLowerCase().includes(query);
             const emailMatch = order.customer_email?.toLowerCase().includes(query);
-            if (!nameMatch && !emailMatch) return false;
+            const phoneMatch = order.customer_phone?.toLowerCase().includes(query);
+            if (!nameMatch && !emailMatch && !phoneMatch) return false;
         }
 
         // Date Filter (Delivery Date)
@@ -431,6 +432,7 @@ export default function AdminOrdersPage() {
                                             <td className="p-4 align-middle">
                                                 <div className="font-semibold">{order.customer_name}</div>
                                                 <div className="text-zinc-500 text-xs">{order.customer_email}</div>
+                                                <div className="text-zinc-600 text-xs font-medium mt-1">{order.customer_phone || '-'}</div>
                                             </td>
                                             <td className="p-4 align-middle text-sm text-zinc-600">
                                                 {order.delivery_address?.pickupLocation
