@@ -38,6 +38,14 @@ export async function POST(request: Request) {
             0
         );
 
+        // Server-side minimum order check (€200)
+        if (totalAmount < 200) {
+            return NextResponse.json(
+                { error: `최소 주문 금액은 €200입니다. (Minimum order amount is €200. Current total: €${totalAmount.toFixed(2)})` },
+                { status: 400 }
+            );
+        }
+
         // 3. Prepare data for Supabase
         const addressDetails =
             validData.deliveryMethod === 'delivery'

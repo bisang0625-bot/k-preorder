@@ -29,11 +29,16 @@ interface OrderFormSettings {
     pickups: string[];
 }
 
+const MIN_ORDER_AMOUNT = 200;
+
 export function OrderForm({ settings }: { settings: OrderFormSettings }) {
     const { items } = useCartStore();
     const { language } = useLangStore();
     const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const isMinOrderMet = totalAmount >= MIN_ORDER_AMOUNT;
 
     const schema = useMemo(() => createOrderSchema(settings.zipcodes, settings.pickups), [settings]);
 
@@ -57,6 +62,11 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
     async function onSubmit(data: OrderFormValues) {
         if (items.length === 0) {
             alert('Please select at least one item before ordering.');
+            return;
+        }
+
+        if (totalAmount < MIN_ORDER_AMOUNT) {
+            alert(`최소 주문 금액은 €${MIN_ORDER_AMOUNT}입니다. 현재 금액: €${totalAmount.toFixed(2)}\n(Minimum order is €${MIN_ORDER_AMOUNT}. Current total: €${totalAmount.toFixed(2)})`);
             return;
         }
 
@@ -281,10 +291,15 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
                         />
                     </div>
 
+                    {!isMinOrderMet && items.length > 0 && (
+                        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 text-center">
+                            ⚠️ 최소 주문 금액 €{MIN_ORDER_AMOUNT} 미달 — €{(MIN_ORDER_AMOUNT - totalAmount).toFixed(2)} 더 추가해주세요
+                        </div>
+                    )}
                     <Button
                         type="submit"
                         className="w-full text-lg h-12"
-                        disabled={items.length === 0 || isSubmitting}
+                        disabled={items.length === 0 || isSubmitting || !isMinOrderMet}
                     >
                         {isSubmitting ? (
                             <>
