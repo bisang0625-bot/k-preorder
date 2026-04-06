@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createOrderSchema, OrderFormValues } from '@/schemas/orderSchema';
@@ -32,13 +32,12 @@ interface OrderFormSettings {
 const MIN_ORDER_AMOUNT = 200;
 
 export function OrderForm({ settings }: { settings: OrderFormSettings }) {
-    const { items } = useCartStore();
+    const { items, setDeliveryMethod } = useCartStore();
     const { language } = useLangStore();
     const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(language, key);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const isMinOrderMet = totalAmount >= MIN_ORDER_AMOUNT;
 
     const schema = useMemo(() => createOrderSchema(settings.zipcodes, settings.pickups), [settings]);
 
@@ -59,13 +58,21 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
 
     const watchDeliveryMethod = form.watch('deliveryMethod');
 
+    // Pickup has no minimum order, delivery requires €200
+    const isMinOrderMet = watchDeliveryMethod === 'pickup' || totalAmount >= MIN_ORDER_AMOUNT;
+
+    // Sync delivery method to global store so OrderSummary can access it
+    useEffect(() => {
+        setDeliveryMethod(watchDeliveryMethod);
+    }, [watchDeliveryMethod, setDeliveryMethod]);
+
     async function onSubmit(data: OrderFormValues) {
         if (items.length === 0) {
             alert('Please select at least one item before ordering.');
             return;
         }
 
-        if (totalAmount < MIN_ORDER_AMOUNT) {
+        if (data.deliveryMethod === 'delivery' && totalAmount < MIN_ORDER_AMOUNT) {
             alert(`최소 주문 금액은 €${MIN_ORDER_AMOUNT}입니다. 현재 금액: €${totalAmount.toFixed(2)}\n(Minimum order is €${MIN_ORDER_AMOUNT}. Current total: €${totalAmount.toFixed(2)})`);
             return;
         }

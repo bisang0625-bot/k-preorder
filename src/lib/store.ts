@@ -14,14 +14,17 @@ export type CartItem = Product & {
 
 interface CartState {
   items: CartItem[];
+  deliveryMethod: 'delivery' | 'pickup';
   addItem: (product: Product) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  setDeliveryMethod: (method: 'delivery' | 'pickup') => void;
   clearCart: () => void;
 }
 
 export const useCartStore = create<CartState>((set) => ({
   items: [],
+  deliveryMethod: 'delivery',
   addItem: (product) =>
     set((state) => {
       const existingItem = state.items.find((item) => item.id === product.id);
@@ -46,5 +49,6 @@ export const useCartStore = create<CartState>((set) => ({
         item.id === productId ? { ...item, quantity: Math.max(0, quantity) } : item
       ),
     })),
+  setDeliveryMethod: (method) => set({ deliveryMethod: method }),
   clearCart: () => set({ items: [] }),
 }));
