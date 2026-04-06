@@ -21,7 +21,7 @@ export const translations = {
 
         // Order Form
         deliveryOrPickup: 'Bezorging of Afhalen?',
-        delivery: 'Bezorging (Delivery)',
+        delivery: 'Bezorging (vanaf €200)',
         pickup: 'Afhalen (Pickup)',
         chooseDate: 'Kies een datum',
         fullName: 'Volledige Naam',
@@ -133,7 +133,7 @@ export const translations = {
         addToCart: 'Add to cart',
 
         deliveryOrPickup: 'Delivery or Pickup?',
-        delivery: 'Delivery',
+        delivery: 'Delivery (from €200)',
         pickup: 'Pickup',
         chooseDate: 'Choose a date',
         fullName: 'Full Name',
@@ -241,7 +241,7 @@ export const translations = {
         addToCart: '장바구니 담기',
 
         deliveryOrPickup: '배달 또는 픽업?',
-        delivery: '배달 (Delivery)',
+        delivery: '배달 (€200부터)',
         pickup: '픽업 (Pickup)',
         chooseDate: '날짜 선택',
         fullName: '성함',
