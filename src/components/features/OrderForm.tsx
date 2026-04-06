@@ -44,7 +44,7 @@ export function OrderForm({ settings }: { settings: OrderFormSettings }) {
     const form = useForm<OrderFormValues>({
         resolver: zodResolver(schema),
         defaultValues: {
-            deliveryMethod: 'delivery',
+            deliveryMethod: 'pickup',
             name: '',
             email: '',
             confirmEmail: '',

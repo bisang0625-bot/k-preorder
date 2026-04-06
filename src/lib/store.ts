@@ -24,7 +24,7 @@ interface CartState {
 
 export const useCartStore = create<CartState>((set) => ({
   items: [],
-  deliveryMethod: 'delivery',
+  deliveryMethod: 'pickup',
   addItem: (product) =>
     set((state) => {
       const existingItem = state.items.find((item) => item.id === product.id);
